@@ -25,16 +25,62 @@ collection_type <- ils_data %>%
   subset(`Code Type`=='ItemCollection') %>% 
   select(Code,`CollTypeDesc`= Description,`Coll Format Subgroup`=`Format Subgroup`)
 
-phys_inv_changes <- physical_inventory %>% 
-  group_by(ReportDate) %>% 
-  summarise(NumItems = sum(ItemCount))
 
-current_phys_inventory <- physical_inventory %>% 
-  subset(ReportDate == '01/01/2019') %>% 
+checkouts_18$Material <- NA
+checkouts_18$Material <- checkouts_18$MaterialType
+checkouts_18$Material[checkouts_18$MaterialType %in% c('ATLAS','BOOK','CR',"ER","NONPROJGRAPH" ,"ER, NONPROJGRAPH","ER, PRINT","ER, REGPRINT","LARGEPRINT","REGPRINT")] <- 'Book'
+checkouts_18$Material[tolower(checkouts_18$Subjects) %like% 'comic and graphic book'|tolower(checkouts_18$Subjects) %like% 'comic book'| checkouts_18$MaterialType == 'COMIC'] <- 'Comic'
+checkouts_18$Material[tolower(checkouts_18$Subjects) %like% 'audiobook'|(tolower(checkouts_18$Publisher) %like% 'audio'& checkouts_18$UsageClass == 'Physical')|checkouts_18$MaterialType %in% c('AUDIOBOOK','REGPRINT, SOUNDDISC','ER, SOUNDDISC') ] <- 'Audiobook'
+
+
+checkout_test <- checkouts_18 %>% 
+  mutate(mat = case_when(MaterialType %in% c('ATLAS','BOOK','CR',"ER","NONPROJGRAPH" ,"ER, NONPROJGRAPH","ER, PRINT","ER, REGPRINT","LARGEPRINT","REGPRINT") ~"Book",
+                         MaterialType == 'EBOOK' ~ "EBook",
+                         (tolower(Subjects) %like% 'audiobook'|(tolower(checkouts_18$Publisher) %like% 'audio'& checkouts_18$UsageClass == 'Physical')|checkouts_18$MaterialType %in% c('AUDIOBOOK','REGPRINT, SOUNDDISC','ER, SOUNDDISC','SOUNDCASS')|(MaterialType=='SOUNDDISC' & tolower(Subjects) %like% 'fiction')) ~ "Audiobook",
+                         (tolower(Subjects) %like% 'comic and graphic book'|tolower(Subjects) %like% 'comic book'| MaterialType == 'COMIC') ~ "Comic",
+                         MaterialType %in% c('SONG','MUSIC','MUSICSNDREC','SOUNDCASS, SOUNDDISC','SOUNDDISC, SOUNDREC','SOUNDREC','SOUNDDISC') ~ "Music",
+                         MaterialType %in% c('MOVIE','TELEVISION','VIDEO','ER, VIDEODISC','REGPRINT, VIDEOREC','SOUNDCASS, SOUNDDISC, VIDEOCASS, VIDEODISC','SOUNDDISC, VIDEOCASS','SOUNDDISC, VIDEODISC','VIDEOCART','VIDEOCASS','VIDEOCASS, VIDEODISC','VIDEODISC','VIDEOREC') ~ 'Video',
+                         MaterialType %in% c('PICTURE','PRINT','VISUAL') ~ "Visual",
+                         MaterialType == 'MAGAZINE' ~ "Magazine",
+                         TRUE ~ "Other"))
+
+
+
+
+
+
+
+checkouts_18_group <- checkouts_18 %>% 
+  group_by(UsageClass,CheckoutType,Material) %>% 
+  summarise(NumCheckouts = sum(Checkouts))
+
+checkout_test_group <- checkout_test %>% 
+  subset(mat='OTHER') %>% 
+  group_by(UsageClass,CheckoutType,Material) %>% 
+  summarise(NumCheckouts = sum(Checkouts))
+
+
+checkouts_18_group2 <- checkouts_18 %>% 
+  subset(MaterialType=='SOUNDDISC') %>% 
+  subset(Material!='Audiobook') %>% 
+  subset(tolower(Publiserh) %like% 'audio') %>% 
+  group_by(UsageClass,CheckoutType,Material,Publisher) %>% 
+  summarise(NumCheckouts = sum(Checkouts))
+
+check_sub <- checkouts_18 %>% 
+  subset(UsageClass=='Physical') %>% 
+  subset(tolower(Publisher) %like% 'audio')
+
+
+
+
+
+#current_phys_inventory <- physical_inventory %>% 
+#  subset(ReportDate == '01/01/2019') %>% 
 #  group_by(Title, Subjects, ItemType, ItemCollection) %>% 
 #  summarise(NumItems = sum(ItemCount)) %>% 
-  #  select (Title, Subjects, ItemType, ItemCollection,ItemLocation, ItemCount) %>% 
-  drop_na(Title) %>% 
+#  select (Title, Subjects, ItemType, ItemCollection,ItemLocation, ItemCount) %>% 
+drop_na(Title) %>% 
   arra
 
 phys_checkouts <- checkouts_18 %>% 
@@ -47,7 +93,7 @@ phys_checkouts_group <- phys_checkouts %>%
   group_by(UsageClass) %>% 
   summarise(NumCheckouts = sum(Checkouts))
 
-audiobooks <- checkouts_18[grep('AUDIOBOOK',toupper(checkouts_18$Subjects)),]
+audiobooks <- checkouts_18[grep('Audiobook',checkouts_18$Subjects,ignore.case),]
 audiobooks_group <- audiobooks %>% 
   group_by(UsageClass,CheckoutType,MaterialType) %>% 
   summarise(NumCheckouts = sum(Checkouts))
@@ -71,6 +117,8 @@ checkouts_18_subset <- checkouts_18 %>%
   # subset(CheckoutType=='OverDrive')
   subset(Creator %like% "Lu, Marie")
 
+###################################
+
 phys_checkouts_18 <- read_csv("data/Checkouts_By_Title_Data_Lens_2018.csv") 
 
 phys_checkouts_18_summ <- phys_checkouts_18 %>% 
@@ -80,6 +128,9 @@ phys_checkouts_18_summ <- phys_checkouts_18 %>%
 phys_checkouts_18_summ_join <- phys_checkouts_18_summ %>% 
   left_join(item_type,by=c("ItemType"="Code")) %>% 
   left_join(collection_type, by=c("Collection"="Code"))
+
+phys_with_aud <- phys_checkouts_18_summ_join %>% 
+  mutate(Material = ifelse(grepl('Audiobook',phys_checkouts_18_summ_join$Subjects,ignore.case = TRUEr), 'Audiobook',"other"))
 
 audiobooks <- phys_checkouts_18_summ_join[grep('AUDIOBOOK',toupper(phys_checkouts_18_summ_join$Subjects)),]
 
