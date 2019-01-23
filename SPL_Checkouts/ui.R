@@ -9,13 +9,23 @@
 
 library(shiny)
 
-# Define UI for application that draws a histogram
 ui <- fluidPage(
-  # We MUST load the ECharts javascript library in advance
-  radioButtons('value',"Value",choices=c('MatYrlyCheckouts',"YearlyPct"),selected = 'YearlyPct'),
-  radioButtons('value2',"Value2",choices=c('UsageClass',"Material"),selected = 'Material'),
-  radioButtons('value3',"Value3",choices=c('All','Physical','Digital'),selected = 'All'),
-  plotlyOutput("plot"),
-  plotlyOutput('monthPlot')
+  
+  fluidRow(
+    column(3, radioButtons('value',"Value",choices=c('MatYrlyCheckouts',"YearlyPct"),selected = 'YearlyPct')),
+    column(3, radioButtons('value2',"Value2",choices=c('UsageClass',"Material"),selected = 'Material')),
+    column(3, radioButtons('value3',"Usage Class",choices=c('All','Physical','Digital'),selected = 'All'))),
+  fluidRow(
+    plotlyOutput("plot")),
+  fluidRow(
+    plotlyOutput('monthPlot')),
+  fluidRow(
+    column(3, radioButtons('value4','Usage Class',choices=c('Physical','Digital'),selected = 'Physical')),
+    column(3, radioButtons('value5','Material',choices=c('Book','EBook','Audiobook'),selected = 'Book')),
+    column(3, selectInput('year','Year',choices = year, selected='2018'))
+    ),
+  fluidRow(
+    plotOutput('wordcloud'))
+  
 )
 

@@ -20,7 +20,8 @@ server <- function(input, output) {
    
   output$plot <- renderPlotly({ggplotly(ggplot(df_subset(), aes_string(fill=input$value2, y=input$value, x='CheckoutYear')) + 
       geom_bar( stat="identity")+
-        theme_light()) })
+        theme_light()+
+        ggtitle("Checkout Trends",subtitle='2006 - 2018')) })
   
   output$monthPlot <- renderPlotly({
     s <- event_data("plotly_click")
@@ -34,20 +35,31 @@ server <- function(input, output) {
       
       ggplotly(ggplot(df_subset2(), aes_string(fill=input$value2, y=y_var(), x='CheckoutMonYr')) + 
                  geom_bar( stat="identity")+
-                 theme_light())
+                 theme_light()+
+                 ggtitle("Monthly Trends for Selected Year: YYYY"))
       
-      # vars <- c(s[["x"]], s[["y"]])
-      # d <- setNames(mtcars[vars], c("x", "y"))
-      # yhat <- fitted(lm(y ~ x, data = d))
-      # plot_ly(d, x = ~x) %>%
-      #   add_markers(y = ~y) %>%
-      #   add_lines(y = ~yhat) %>%
-      #   layout(xaxis = list(title = s[["x"]]), 
-      #          yaxis = list(title = s[["y"]]), 
-      #          showlegend = FALSE)
     } else {
       plotly_empty()
     }
+  })
+  
+  wordcloud_rep <- repeatable(wordcloud)
+
+  df_subset_3 <- reactive({
+    a <- subset(top_checkouts_subjects_2018, Year== input$year) %>%
+      subset(UsageClass == input$value4) %>%
+      subset(Material == input$value5)
+    return(a)
+  })
+
+  output$wordcloud <- renderPlot({
+    df <- df_subset_3()
+    wordcloud_rep(df$word,df$freq
+                  , min.freq=10, max.words=100
+                  , random.order=T
+                  , rot.per=.15
+                  , vfont=c("sans serif","plain"))
+
   })
     
   }
