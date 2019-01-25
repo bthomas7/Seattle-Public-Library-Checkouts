@@ -8,58 +8,93 @@
 #
 
 library(shiny)
+library(shinythemes)
 
 
 # Define server logic required to draw a histogram
-server <- function(input, output) {
+server <- function(input, output,session) {
   
-  df_subset <- reactive({
-    a <- subset(checkouts_yearly_all, UsageClass == input$value3|input$value3=='All')
+  yearly_checkouts <- reactive({
+    a <- subset(checkouts_yearly_all, UsageClass == input$usage|input$usage=='All')
     return(a)
   })
-   
-  output$plot <- renderPlotly({ggplotly(ggplot(df_subset(), aes_string(fill=input$value2, y=input$value, x='CheckoutYear')) + 
-      geom_bar( stat="identity")+
-        theme_light()+
-        ggtitle("Checkout Trends",subtitle='2006 - 2018')) })
+  
+ 
+  output$yearPlot <- renderPlotly({ggplotly(ggplot(yearly_checkouts(), aes_string(fill=input$fill, y=input$measure, x='Year')) + 
+      geom_bar( stat="identity") +
+        theme_light() +
+        ylab(if_else(input$measure=='Checkouts', paste("Number of Checkouts (in thousands)"),"Percentage of Total Checkouts"))+
+        scale_fill_manual(values=item.color)) })
   
   output$monthPlot <- renderPlotly({
     s <- event_data("plotly_click")
     if (length(s)) {
-      df_subset2 <- reactive({
-        a <- subset(checkouts_monthly_all,CheckoutYear== s[["x"]]) %>%
-          subset(UsageClass == input$value3|input$value3=='All')
+      monthly_checkouts <- reactive({
+        a <- subset(checkouts_monthly_all,Year== s[["x"]]) %>%
+          subset(UsageClass == input$usage|input$usage=='All')
         return(a)})
-      y_var <- reactive({if_else(input$value=='MatYrlyCheckouts','MatMthlyCheckouts','MonthlyPct')})
+     # y_var <- reactive({if_else(input$measure=='MatYrlyCheckouts','MatMthlyCheckouts','MonthlyPct')})
       
-      
-      ggplotly(ggplot(df_subset2(), aes_string(fill=input$value2, y=y_var(), x='CheckoutMonYr')) + 
+      ggplotly(ggplot(monthly_checkouts(), aes_string(fill=input$fill, y=input$measure, x='MonthYear')) + 
                  geom_bar( stat="identity")+
                  theme_light()+
-                 ggtitle("Monthly Trends for Selected Year: YYYY"))
+                 ylab(if_else(input$measure=='Checkouts', paste("Number of Checkouts (in thousands)"),"Percentage of Total Checkouts"))+
+                 ggtitle(paste("Monthly Trends for Selected Year:",s[["x"]])) +
+                 scale_fill_manual(values=item.color))
       
     } else {
       plotly_empty()
     }
   })
   
-  wordcloud_rep <- repeatable(wordcloud)
 
-  df_subset_3 <- reactive({
-    a <- subset(top_checkouts_subjects_2018, Year== input$year) %>%
-      subset(UsageClass == input$value4) %>%
-      subset(Material == input$value5)
+ 
+  observe({
+    if (input$usage2 == "Physical") {
+      shinyjs::enable(selector = "[type=radio][value=Book]")
+      shinyjs::runjs("$('[type=radio][value=Book]').parent().parent().addClass('enabled').css('opacity', 1)")
+      shinyjs::disable(selector = "[type=radio][value=EBook]")
+      shinyjs::runjs("$('[type=radio][value=EBook]').parent().parent().addClass('disabled').css('opacity', 0.4)")
+    }
+  })
+  
+  observe({
+    if (input$usage2 == "Digital") {
+      shinyjs::enable(selector = "[type=radio][value=EBook]")
+      shinyjs::runjs("$('[type=radio][value=EBook]').parent().parent().addClass('enabled').css('opacity', 1)")
+      shinyjs::disable(selector = "[type=radio][value=Book]")
+      shinyjs::runjs("$('[type=radio][value=Book]').parent().parent().addClass('disabled').css('opacity', 0.4)")
+    }
+  })
+  
+  top_checkouts_wc <- reactive({
+   a <- subset(top_checkouts_subjects, Year== input$year) %>%
+     subset(UsageClass == input$usage2) %>%
+     subset(Material == input$material) %>% 
+     select(word,freq) %>% 
+     subset(word != if_else(input$exclude==TRUE,'juvenile','0')) %>% 
+     head(n=100)
+   return(a)
+   })
+  
+
+  output$wordcloud <- renderWordcloud2({
+    df <- top_checkouts_wc()
+    wc <- wordcloud2(df, size =1, color=rep_len(pal, nrow(df))
+                     ,minRotation = -pi/2,maxRotation = -pi/2,rotateRatio = 0.4,gridSize = '5')
+  })
+  
+  top_checkouts_dt <- reactive({
+    a <- subset(top_checkouts, CheckoutYear== input$year) %>%
+      subset(UsageClass == input$usage2) %>%
+      subset(Material == input$material) %>% 
+      select(Title,Creator,Subjects,`Number of Checkouts`=TotalCheckouts)
     return(a)
   })
-
-  output$wordcloud <- renderPlot({
-    df <- df_subset_3()
-    wordcloud_rep(df$word,df$freq
-                  , min.freq=10, max.words=100
-                  , random.order=T
-                  , rot.per=.15
-                  , vfont=c("sans serif","plain"))
-
+    
+  output$top_titles <- DT::renderDataTable({
+    top_checkouts_dt()
+    
   })
     
   }
