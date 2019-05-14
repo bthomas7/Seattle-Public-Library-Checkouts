@@ -5,7 +5,7 @@ Summary
 -------------
 Public libraries have done great work to stay relevant even as information and books have become more digitally available. But how have our reading habits changed? Using datasets provided by the Seattle Public Library (SPL) of physical and digital items checked out each month since January 2006, I explored changes in item types and genres most checked out over time. The datasets provided were sourced from the library system as well as multiple media vendors for digital items, which introduced variances in title and author names. 
 
-An interactive shiny app was created to visualize yearly and monthly trends in checkouts by usage class or material type and to explore the top book (physical/ebook/audio) checkouts per year by usage class with their subjects visualized in a word cloud. Best viewed in fullscreen mode.
+An [interactive shiny app](https://bthomas7.shinyapps.io/SPL_Checkouts/) was created to visualize yearly and monthly trends in checkouts by usage class or material type and to explore the top book (physical/ebook/audio) checkouts per year by usage class with their subjects visualized in a word cloud. Best viewed in fullscreen mode.
 
 ![Capture1](https://user-images.githubusercontent.com/42395526/57702126-0321f200-7623-11e9-9ed9-e06fd12ce50b.PNG)
 
